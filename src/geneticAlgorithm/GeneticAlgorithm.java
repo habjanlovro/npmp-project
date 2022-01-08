@@ -1,4 +1,4 @@
-package GeneticAlgorithm;
+package geneticAlgorithm;
 
 import bsim.BSim;
 import bsim.BSimTicker;

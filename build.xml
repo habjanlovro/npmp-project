@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="npmp-project" default="package" basedir=".">
+    <description>Ant build for NPMP project - Genetic algorithm with BSim</description>
+
+    <property name="src" location="src"/>
+    <property name="lib" location="lib"/>
+    <property name="dist" location="dist"/>
+    <property name="build" location="${dist}/build"/>
+
+    <target name="init">
+        <tstamp/>
+        <mkdir dir="${build}"/>
+    </target>
+
+    <target name="compile" depends="init" description="Compile source code with dependencies.">
+        <javac
+                srcdir="${src}"
+                destdir="${build}">
+            <classpath>
+                <fileset dir="${lib}/" includes="*.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="package" depends="clean, compile"
+            description="Package source code and dependencies in a JAR file.">
+        <jar jarfile="${dist}/NPMP-GA.jar" basedir="${build}">
+            <manifest>
+                <attribute name="Main-Class"
+                           value="geneticAlgorithm.GeneticAlgorithm"/>
+            </manifest>
+            <zipgroupfileset dir="${lib}" includes="*.jar"/>
+        </jar>
+    </target>
+
+    <target name="clean" description="Cleans up build and distribution folders">
+        <delete dir="${build}"/>
+        <delete dir="${dist}"/>
+    </target>
+
+</project>

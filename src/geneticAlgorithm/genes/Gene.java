@@ -4,6 +4,7 @@ import geneticAlgorithm.proteins.Protein;
 
 import javax.vecmath.Vector3d;
 import java.util.List;
+import java.util.Map;
 
 public abstract class Gene {
 
@@ -17,7 +18,7 @@ public abstract class Gene {
         this.outputProtein = outputProtein;
     }
 
-    public abstract Protein evaluateFunction(Vector3d position);
+    public abstract Protein evaluateFunction(Map<String, Protein> givenProteins);
 
     public List<Protein> getInputProteins() {
         return inputProteins;

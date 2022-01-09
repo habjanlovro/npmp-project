@@ -4,6 +4,7 @@ import geneticAlgorithm.proteins.Protein;
 
 import javax.vecmath.Vector3d;
 import java.util.List;
+import java.util.Map;
 
 public class OrGene extends Gene {
 
@@ -12,14 +13,25 @@ public class OrGene extends Gene {
     }
 
     @Override
-    public Protein evaluateFunction(Vector3d position) {
-        boolean orCondition = false;
+    public Protein evaluateFunction(Map<String, Protein> givenProteins) {
         for (Protein inputProtein : this.getInputProteins()) {
-            if (inputProtein.satisfiesEquation(position)) {
-                orCondition = true;
-                break;
+            if (inputProtein.isPresent()) {
+                if (givenProteins.containsKey(inputProtein.getName())) {
+                    Protein givenProtein = givenProteins.get(inputProtein.getName());
+                    if (givenProtein.isPresent()) {
+                        return this.getOutputProtein();
+                    }
+                }
+            } else {
+                if (!givenProteins.containsKey(inputProtein.getName())) {
+                    return this.getOutputProtein();
+                }
+                Protein givenProtein = givenProteins.get(inputProtein.getName());
+                if (!givenProtein.isPresent()) {
+                    return this.getOutputProtein();
+                }
             }
         }
-        return orCondition ? this.getOutputProtein() : null;
+        return null;
     }
 }

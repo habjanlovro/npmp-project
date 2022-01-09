@@ -4,6 +4,7 @@ import geneticAlgorithm.proteins.Protein;
 
 import javax.vecmath.Vector3d;
 import java.util.List;
+import java.util.Map;
 
 public class TrueGene extends Gene {
     public TrueGene(List<Protein> inputProteins, Protein outputProtein) {
@@ -11,7 +12,7 @@ public class TrueGene extends Gene {
     }
 
     @Override
-    public Protein evaluateFunction(Vector3d position) {
+    public Protein evaluateFunction(Map<String, Protein> givenProteins) {
         return this.getOutputProtein();
     }
 }

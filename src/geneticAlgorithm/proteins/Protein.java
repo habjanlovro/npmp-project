@@ -1,47 +1,15 @@
 package geneticAlgorithm.proteins;
 
-import bsim.BSimChemicalField;
-
-import javax.vecmath.Vector3d;
-
 public class Protein {
 
     private String name;
-    private BSimChemicalField chemField;
-    private boolean isExpressed;
-    private double threshold;
+    private boolean isPresent;
 
     public Protein() {}
 
-    public Protein(String name, BSimChemicalField chemField, boolean isExpressed, double threshold) {
+    public Protein(String name, boolean isPresent) {
         this.name = name;
-        this.chemField = chemField;
-        this.isExpressed = isExpressed;
-        this.threshold = threshold;
-    }
-
-    public boolean satisfiesEquation(Vector3d position) {
-        if (isExpressed()) {
-            return getChemField().getConc(position) > getThreshold();
-        } else {
-            return getChemField().getConc(position) < getThreshold();
-        }
-    }
-
-    public BSimChemicalField getChemField() {
-        return chemField;
-    }
-
-    public void setChemField(BSimChemicalField chemField) {
-        this.chemField = chemField;
-    }
-
-    public boolean isExpressed() {
-        return isExpressed;
-    }
-
-    public void setExpressed(boolean expressed) {
-        isExpressed = expressed;
+        this.isPresent = isPresent;
     }
 
     public String getName() {
@@ -52,11 +20,11 @@ public class Protein {
         this.name = name;
     }
 
-    public double getThreshold() {
-        return threshold;
+    public boolean isPresent() {
+        return isPresent;
     }
 
-    public void setThreshold(double threshold) {
-        this.threshold = threshold;
+    public void setPresent(boolean present) {
+        isPresent = present;
     }
 }

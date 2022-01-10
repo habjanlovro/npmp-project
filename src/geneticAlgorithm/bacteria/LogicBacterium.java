@@ -28,6 +28,9 @@ public class LogicBacterium extends BSimBacterium {
     private final Random rng = new Random();
     private double crossoverRate;
     private double mutationRate;
+    
+    private boolean conjugated;
+    private HashMap<String, Protein> solution;
 
     public Status bacteriaStatus;
 
@@ -37,7 +40,9 @@ public class LogicBacterium extends BSimBacterium {
             Gene f1, Gene f2, Gene f3,
             List<Gene> clausesGenes,
             double crossoverRate,
-            double mutationRate) {
+            double mutationRate,
+            boolean conjugated,
+            HashMap<String, Protein> solution) {
         super(bSim, vector3d);
         this.f1 = f1;
         this.f2 = f2;
@@ -45,6 +50,8 @@ public class LogicBacterium extends BSimBacterium {
         this.clausesGenes = clausesGenes;
         this.crossoverRate = crossoverRate;
         this.mutationRate = mutationRate;
+        this.conjugated = conjugated;
+        this.solution = solution;
         this.bacteriaStatus = Status.NOTHING_PRESENT;
     }
 
@@ -59,6 +66,8 @@ public class LogicBacterium extends BSimBacterium {
                 clauseProteins.put(outputProtein.getName(), outputProtein);
             }
         }
+        
+        this.setSolution(clauseProteins);
 
         Protein nok = this.getF1().evaluateFunction(clauseProteins);
         Protein ok = this.getF2().evaluateFunction(clauseProteins);
@@ -70,6 +79,7 @@ public class LogicBacterium extends BSimBacterium {
         if (!this.equals(bacterium) && this.outerDistance(bacterium) < 0) {
             if (rng.nextDouble() <= this.getCrossoverRate()) {
                 this.conjugate(bacterium);
+                this.setConjugated(true);
             }
         }
     }
@@ -152,5 +162,21 @@ public class LogicBacterium extends BSimBacterium {
 
     public void setF3(Gene f3) {
         this.f3 = f3;
+    }
+    
+    public boolean getConjugated() {
+        return conjugated;
+    }
+    
+    public void setConjugated(boolean conjugated) {
+        this.conjugated = conjugated;
+    }
+    
+    public HashMap<String, Protein> getSolution() {
+        return solution;
+    }
+    
+    public void setSolution(HashMap<String, Protein> solution) {
+        this.solution = solution;
     }
 }

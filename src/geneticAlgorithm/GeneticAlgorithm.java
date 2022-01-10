@@ -3,7 +3,10 @@ package geneticAlgorithm;
 import bsim.BSim;
 import bsim.BSimTicker;
 import bsim.draw.BSimP3DDrawer;
+import bsim.BSimUtils;
+import bsim.export.BSimLogger;
 import geneticAlgorithm.bacteria.LogicBacterium;
+import geneticAlgorithm.bacteria.LogicBacterium.Status;
 import geneticAlgorithm.genes.AndGene;
 import geneticAlgorithm.genes.Gene;
 import geneticAlgorithm.genes.OrGene;
@@ -13,6 +16,7 @@ import processing.core.PGraphics3D;
 
 import javax.vecmath.Vector3d;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -92,6 +96,9 @@ public class GeneticAlgorithm {
                 f3InputProteins.add(nokProtein);
                 f3InputProteins.add(okProtein);
                 var f3 = new AndGene(f3InputProteins, gfpProtein);
+                
+                var conjugated = false;
+                var solution = new HashMap<String, Protein>();
 
                 var bacterium = new LogicBacterium(
                         sim,
@@ -99,7 +106,9 @@ public class GeneticAlgorithm {
                         f1, f2, f3,
                         clauseGene,
                         crossoverRate,
-                        mutationRate);
+                        mutationRate,
+                        conjugated,
+                        solution);
                 bacterium.setSurfaceAreaGrowthRate();
 
                 bacteria.add(bacterium);
@@ -114,6 +123,9 @@ public class GeneticAlgorithm {
             f3InputProteins.add(nokProtein);
             f3InputProteins.add(okProtein);
             var f3 = new AndGene(f3InputProteins, gfpProtein);
+            
+            var conjugated = false;
+            var solution = new HashMap<String, Protein>();
 
             var complement = new LogicBacterium(
                     sim,
@@ -121,7 +133,9 @@ public class GeneticAlgorithm {
                     f1, f2, f3,
                     new ArrayList<>(),
                     crossoverRate,
-                    mutationRate);
+                    mutationRate,
+                    conjugated,
+                    solution);
             complement.setSurfaceAreaGrowthRate();
             bacteria.add(complement);
         }
@@ -150,7 +164,54 @@ public class GeneticAlgorithm {
                 }
             }
         });
-
+        
+        String resultsDir = BSimUtils.generateDirectoryPath("./results/");
+        
+        BSimLogger loggerConjugations = new BSimLogger(sim, resultsDir + "conjugations.csv") {
+			
+			@Override
+			public void before() {
+				super.before();
+				write("time,conjugations"); 
+			}
+			
+			@Override
+			public void during() {
+				int collisions = 0;
+				
+				for (LogicBacterium bacterium : bacteria) {
+					if (bacterium.getConjugated()) {
+						collisions++;
+						bacterium.setConjugated(false);
+					}
+				}
+				
+				write(sim.getFormattedTime() + "," + collisions);
+			}
+		};
+		sim.addExporter(loggerConjugations);
+		
+		BSimLogger loggerSolutions = new BSimLogger(sim, resultsDir + "solutions.csv") {
+			
+			@Override
+			public void before() {
+				super.before();
+				write("time,clauses"); 
+			}
+			
+			@Override
+			public void during() {
+				for (LogicBacterium bacterium : bacteria) {
+					if (bacterium.bacteriaStatus == Status.OK_PRESENT) {
+						write(sim.getFormattedTime() + "," + bacterium.getSolution().keySet());
+						bacterium.setSolution(null);
+					}
+				}
+			}
+		};
+		sim.addExporter(loggerSolutions);
+		
+		sim.export();
         sim.preview();
     }
 

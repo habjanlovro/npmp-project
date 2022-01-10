@@ -7,9 +7,8 @@ import geneticAlgorithm.proteins.Protein;
 
 import javax.vecmath.Vector3d;
 import java.awt.*;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Random;
 
 public class LogicBacterium extends BSimBacterium {
 
@@ -33,6 +32,7 @@ public class LogicBacterium extends BSimBacterium {
     private HashMap<String, Protein> solution;
 
     public Status bacteriaStatus;
+    private int generationNum;
 
     public LogicBacterium(
             BSim bSim,
@@ -41,8 +41,7 @@ public class LogicBacterium extends BSimBacterium {
             List<Gene> clausesGenes,
             double crossoverRate,
             double mutationRate,
-            boolean conjugated,
-            HashMap<String, Protein> solution) {
+            int generationNum) {
         super(bSim, vector3d);
         this.f1 = f1;
         this.f2 = f2;
@@ -50,9 +49,10 @@ public class LogicBacterium extends BSimBacterium {
         this.clausesGenes = clausesGenes;
         this.crossoverRate = crossoverRate;
         this.mutationRate = mutationRate;
-        this.conjugated = conjugated;
-        this.solution = solution;
+        this.generationNum = generationNum;
         this.bacteriaStatus = Status.NOTHING_PRESENT;
+        this.conjugated = false;
+        this.solution = new HashMap<String, Protein>();
     }
 
     @Override
@@ -92,6 +92,32 @@ public class LogicBacterium extends BSimBacterium {
                 bacterium.getClausesGenes().add(gene);
             }
         }
+    }
+
+    @Override
+    public void replicate() {
+        this.setRadiusFromSurfaceArea(this.surfaceArea(this.replicationRadius) / 2.0D);
+        LogicBacterium var1 = new LogicBacterium(
+                this.sim,
+                new Vector3d(this.position),
+                this.getF1(), this.getF2(), this.getF3(),
+                this.mutateGenes(),
+                this.getCrossoverRate(), this.getMutationRate(),
+                this.getGenerationNum() + 1);
+        var1.setRadius(this.radius);
+        var1.setSurfaceAreaGrowthRate(this.surfaceAreaGrowthRate);
+        var1.setChildList(this.childList);
+        this.childList.add(var1);
+    }
+
+    public List<Gene> mutateGenes() {
+        var genes = new ArrayList<Gene>();
+        for (Gene gene : this.getClausesGenes()) {
+            if (rng.nextDouble() > this.getMutationRate()) {
+                genes.add(gene);
+            }
+        }
+        return genes;
     }
 
     private void setStatus(Protein nok, Protein ok) {
@@ -178,5 +204,13 @@ public class LogicBacterium extends BSimBacterium {
     
     public void setSolution(HashMap<String, Protein> solution) {
         this.solution = solution;
+    }
+
+    public int getGenerationNum() {
+        return generationNum;
+    }
+
+    public void setGenerationNum(int generationNum) {
+        this.generationNum = generationNum;
     }
 }

@@ -16,23 +16,36 @@ import processing.core.PGraphics3D;
 
 import javax.vecmath.Vector3d;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.Vector;
 
 public class GeneticAlgorithm {
 
     private final static Random rng = new Random();
 
     public static void main(String[] args) {
+        System.out.println("Simple genetic algorithm with BSim.");
+
         var sc = new Scanner(System.in);
 
         BSim sim = new BSim();
         sim.setDt(0.1);
         sim.setSolid(true, true, true);
-        sim.setSimulationTime(5);
+        sim.setSimulationTime(1 * 60); // run for 1 minute (if export == true)
 
-        System.out.println("Simple genetic algorithm with BSim.");
+        boolean export = false;
+        System.out.println("Do you want to export data? [Y / y- yes, export data | N / n - no, run simulation]:");
+        String ans = sc.next();
+        if (ans.equals("Y") || ans.equals("y")) {
+            export = true;
+        } else if (ans.equals("N") || ans.equals("n")) {
+            export = false;
+        }
+
+        System.out.println("Enter the maximum population number:");
+        int maxPopulation = sc.nextInt();
+
         System.out.println("Enter the number of proteins:");
         int numProteins = sc.nextInt();
 
@@ -83,7 +96,8 @@ public class GeneticAlgorithm {
             System.exit(1);
         }
 
-        var bacteria = new ArrayList<LogicBacterium>();
+        var bacteria = new Vector<LogicBacterium>();
+        final var children = new Vector<LogicBacterium>();
         for (int geneIndex = 0; geneIndex < clausesGenes.size(); geneIndex++) {
             var clauseGene = new ArrayList<Gene>();
             clauseGene.add(clausesGenes.get(geneIndex));
@@ -96,9 +110,6 @@ public class GeneticAlgorithm {
                 f3InputProteins.add(nokProtein);
                 f3InputProteins.add(okProtein);
                 var f3 = new AndGene(f3InputProteins, gfpProtein);
-                
-                var conjugated = false;
-                var solution = new HashMap<String, Protein>();
 
                 var bacterium = new LogicBacterium(
                         sim,
@@ -107,9 +118,10 @@ public class GeneticAlgorithm {
                         clauseGene,
                         crossoverRate,
                         mutationRate,
-                        conjugated,
-                        solution);
-                bacterium.setSurfaceAreaGrowthRate();
+                        0);
+                bacterium.setRadius();
+                bacterium.setSurfaceAreaGrowthRate(1);
+                bacterium.setChildList(children);
 
                 bacteria.add(bacterium);
             }
@@ -123,9 +135,6 @@ public class GeneticAlgorithm {
             f3InputProteins.add(nokProtein);
             f3InputProteins.add(okProtein);
             var f3 = new AndGene(f3InputProteins, gfpProtein);
-            
-            var conjugated = false;
-            var solution = new HashMap<String, Protein>();
 
             var complement = new LogicBacterium(
                     sim,
@@ -134,9 +143,10 @@ public class GeneticAlgorithm {
                     new ArrayList<>(),
                     crossoverRate,
                     mutationRate,
-                    conjugated,
-                    solution);
-            complement.setSurfaceAreaGrowthRate();
+                    0);
+            complement.setRadius();
+            complement.setSurfaceAreaGrowthRate(1);
+            complement.setChildList(children);
             bacteria.add(complement);
         }
 
@@ -153,6 +163,11 @@ public class GeneticAlgorithm {
                         bacterium1.interaction(bacterium2);
                     }
                 }
+
+                if (bacteria.size() < maxPopulation) {
+                    bacteria.addAll(children);
+                }
+                children.clear();
             }
         });
 
@@ -164,55 +179,60 @@ public class GeneticAlgorithm {
                 }
             }
         });
-        
+
         String resultsDir = BSimUtils.generateDirectoryPath("./results/");
-        
+
         BSimLogger loggerConjugations = new BSimLogger(sim, resultsDir + "conjugations.csv") {
-			
+
 			@Override
 			public void before() {
 				super.before();
-				write("time,conjugations"); 
+				write("time,conjugations");
 			}
-			
+
 			@Override
 			public void during() {
 				int collisions = 0;
-				
+
 				for (LogicBacterium bacterium : bacteria) {
 					if (bacterium.getConjugated()) {
 						collisions++;
 						bacterium.setConjugated(false);
 					}
 				}
-				
+
 				write(sim.getFormattedTime() + "," + collisions);
 			}
 		};
 		sim.addExporter(loggerConjugations);
-		
+
 		BSimLogger loggerSolutions = new BSimLogger(sim, resultsDir + "solutions.csv") {
-			
+
 			@Override
 			public void before() {
 				super.before();
-				write("time,clauses"); 
+				write("time,generation,clauses");
 			}
-			
+
 			@Override
 			public void during() {
 				for (LogicBacterium bacterium : bacteria) {
 					if (bacterium.bacteriaStatus == Status.OK_PRESENT) {
-						write(sim.getFormattedTime() + "," + bacterium.getSolution().keySet());
+						write(sim.getFormattedTime() +
+                                "," + bacterium.getGenerationNum() +
+                                "," + bacterium.getSolution().keySet());
 						bacterium.setSolution(null);
 					}
 				}
 			}
 		};
 		sim.addExporter(loggerSolutions);
-		
-		sim.export();
-        sim.preview();
+
+        if (export) {
+            sim.export();
+        } else {
+            sim.preview();
+        }
     }
 
     public static Vector3d getNextBacteriumPos(BSim sim) {

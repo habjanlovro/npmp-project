@@ -7,7 +7,6 @@ import bsim.BSimUtils;
 import bsim.export.BSimLogger;
 import geneticAlgorithm.bacteria.LogicBacterium;
 import geneticAlgorithm.bacteria.LogicBacterium.Status;
-import geneticAlgorithm.genes.AndGene;
 import geneticAlgorithm.genes.Gene;
 import geneticAlgorithm.genes.OrGene;
 import geneticAlgorithm.genes.TrueGene;
@@ -36,7 +35,7 @@ public class GeneticAlgorithm {
 
         boolean export = false;
         System.out.println("Do you want to export data? [Y / y- yes, export data | N / n - no, run simulation]:");
-        String ans = sc.next();
+        String ans = sc.nextLine();
         if (ans.equals("Y") || ans.equals("y")) {
             export = true;
         } else if (ans.equals("N") || ans.equals("n")) {
@@ -44,57 +43,58 @@ public class GeneticAlgorithm {
         }
 
         System.out.println("Enter the maximum population number:");
-        int maxPopulation = sc.nextInt();
+        int maxPopulation = Integer.parseInt(sc.nextLine());
 
-        System.out.println("Enter the number of proteins:");
-        int numProteins = sc.nextInt();
+        System.out.println("Enter the number of different proteins:");
+        int numDiffProteins = Integer.parseInt(sc.nextLine());
 
         var clausesGenes = new ArrayList<TrueGene>();
-        var expressedProteins = new ArrayList<Protein>();
-        var notExpressedProteins = new ArrayList<Protein>();
-        var initialAmounts = new ArrayList<Integer>();
-
-        System.out.println("For each protein: is expressed (1 - YES / 0 - NO) and the initial amount:");
-        for (int i = 0; i < numProteins; i++) {
-            int isExpressed = sc.nextInt();
-            int initialAmount = sc.nextInt();
-            if (isExpressed < 0 || isExpressed > 1) {
-                System.out.println("Incorrect is expressed! Must be 0 or 1.");
-                System.exit(1);
-            }
-            if (initialAmount < 0) {
-                System.out.println("Incorrect initial amount. Must be a positive number!");
-                System.exit(1);
-            }
-
-            initialAmounts.add(initialAmount);
-            var protein = new Protein("p" + i, true);
+        for (int i = 0; i < numDiffProteins; i++) {
+            var protein = new Protein(String.valueOf(i + 1), true);
             var gene = new TrueGene(new ArrayList<>(), protein);
             clausesGenes.add(gene);
-            if (isExpressed == 1) {
-                expressedProteins.add(protein);
-            } else {
-                notExpressedProteins.add(protein);
-            }
         }
 
-        var nokProtein = new Protein("NOK", false);
+        System.out.println("Enter the initial amount of each protein:");
+        int initialAmount = Integer.parseInt(sc.nextLine());
+
+        System.out.println("Enter the number of clauses:");
+        int numClauses = Integer.parseInt(sc.nextLine());
+
+
         var okProtein = new Protein("OK", true);
-        var gfpProtein = new Protein("GFP", true);
+        var equationClauses = new ArrayList<Gene>();
+        System.out.println("Write each clause in SAT format [example: x1 x2 -x3 translates to (x1 OR x2 OR (NOT x3))]:");
+        for (int i = 0; i < numClauses; i++) {
+            String clause = sc.nextLine();
+            var orClause = new ArrayList<Protein>();
+            for (String literal : clause.split(" ")) {
+                int lit = Integer.parseInt(literal);
+                if (lit < 0) {
+                    orClause.add(new Protein(String.valueOf(lit * (-1)), false));
+                } else {
+                    orClause.add(new Protein(String.valueOf(lit), true));
+                }
+            }
+            var orGene = new OrGene(orClause, okProtein);
+            equationClauses.add(orGene);
+        }
 
         System.out.println("Crossover rate [0.0-1.0]: ");
-        double crossoverRate = sc.nextDouble();
+        double crossoverRate = Double.parseDouble(sc.nextLine());
         if (crossoverRate < 0 || crossoverRate > 1) {
             System.out.println("Incorrect crossover rate! Must be between 0.0 or 1.0.");
             System.exit(1);
         }
 
         System.out.println("Mutation rate [0.0-1.0]: ");
-        double mutationRate = sc.nextDouble();
+        double mutationRate = Double.parseDouble(sc.nextLine());
         if (mutationRate < 0 || mutationRate > 1) {
             System.out.println("Incorrect mutation rate! Must be between 0.0 or 1.0.");
             System.exit(1);
         }
+
+        sc.close();
 
         var bacteria = new Vector<LogicBacterium>();
         final var children = new Vector<LogicBacterium>();
@@ -102,19 +102,11 @@ public class GeneticAlgorithm {
             var clauseGene = new ArrayList<Gene>();
             clauseGene.add(clausesGenes.get(geneIndex));
 
-            for (int i = 0; i < initialAmounts.get(geneIndex); i++) {
-                var f1 = new OrGene(notExpressedProteins, nokProtein);
-                var f2 = new AndGene(expressedProteins, okProtein);
-
-                var f3InputProteins = new ArrayList<Protein>();
-                f3InputProteins.add(nokProtein);
-                f3InputProteins.add(okProtein);
-                var f3 = new AndGene(f3InputProteins, gfpProtein);
-
+            for (int i = 0; i < initialAmount; i++) {
                 var bacterium = new LogicBacterium(
                         sim,
                         getNextBacteriumPos(sim),
-                        f1, f2, f3,
+                        equationClauses,
                         clauseGene,
                         crossoverRate,
                         mutationRate,
@@ -124,30 +116,20 @@ public class GeneticAlgorithm {
                 bacterium.setChildList(children);
 
                 bacteria.add(bacterium);
+
+                var complement = new LogicBacterium(
+                        sim,
+                        getNextBacteriumPos(sim),
+                        equationClauses,
+                        new ArrayList<>(),
+                        crossoverRate,
+                        mutationRate,
+                        0);
+                complement.setRadius();
+                complement.setSurfaceAreaGrowthRate(1);
+                complement.setChildList(children);
+                bacteria.add(complement);
             }
-        }
-
-        for (int i = 0; i < numProteins; i++) {
-            var f1 = new OrGene(notExpressedProteins, nokProtein);
-            var f2 = new AndGene(expressedProteins, okProtein);
-
-            var f3InputProteins = new ArrayList<Protein>();
-            f3InputProteins.add(nokProtein);
-            f3InputProteins.add(okProtein);
-            var f3 = new AndGene(f3InputProteins, gfpProtein);
-
-            var complement = new LogicBacterium(
-                    sim,
-                    getNextBacteriumPos(sim),
-                    f1, f2, f3,
-                    new ArrayList<>(),
-                    crossoverRate,
-                    mutationRate,
-                    0);
-            complement.setRadius();
-            complement.setSurfaceAreaGrowthRate(1);
-            complement.setChildList(children);
-            bacteria.add(complement);
         }
 
         sim.setTicker(new BSimTicker() {
@@ -197,7 +179,6 @@ public class GeneticAlgorithm {
 				for (LogicBacterium bacterium : bacteria) {
 					if (bacterium.getConjugated()) {
 						collisions++;
-						bacterium.setConjugated(false);
 					}
 				}
 
@@ -211,17 +192,16 @@ public class GeneticAlgorithm {
 			@Override
 			public void before() {
 				super.before();
-				write("time,generation,clauses");
+				write("time,generation,literals");
 			}
 
 			@Override
 			public void during() {
 				for (LogicBacterium bacterium : bacteria) {
-					if (bacterium.bacteriaStatus == Status.OK_PRESENT) {
+					if (bacterium.bacteriaStatus == Status.SATISFIES) {
 						write(sim.getFormattedTime() +
                                 "," + bacterium.getGenerationNum() +
                                 "," + bacterium.getSolution().keySet());
-						bacterium.setSolution(null);
 					}
 				}
 			}

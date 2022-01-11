@@ -13,18 +13,14 @@ import java.util.List;
 public class LogicBacterium extends BSimBacterium {
 
     public enum Status {
-        NOTHING_PRESENT,
-        OK_PRESENT,
-        NOK_PRESENT,
-        BOTH_PRESENT
+        NOT_SATISFIES,
+        SATISFIES
     }
+    private final Random rng = new Random();
 
-    private Gene f1;
-    private Gene f2;
-    private Gene f3;
+    private List<Gene> fitness;
     private List<Gene> clausesGenes;
 
-    private final Random rng = new Random();
     private double crossoverRate;
     private double mutationRate;
     
@@ -37,26 +33,27 @@ public class LogicBacterium extends BSimBacterium {
     public LogicBacterium(
             BSim bSim,
             Vector3d vector3d,
-            Gene f1, Gene f2, Gene f3,
+            List<Gene> fitness,
             List<Gene> clausesGenes,
             double crossoverRate,
             double mutationRate,
             int generationNum) {
         super(bSim, vector3d);
-        this.f1 = f1;
-        this.f2 = f2;
-        this.f3 = f3;
+        this.fitness = fitness;
         this.clausesGenes = clausesGenes;
         this.crossoverRate = crossoverRate;
         this.mutationRate = mutationRate;
         this.generationNum = generationNum;
-        this.bacteriaStatus = Status.NOTHING_PRESENT;
+        this.bacteriaStatus = Status.NOT_SATISFIES;
         this.conjugated = false;
         this.solution = new HashMap<String, Protein>();
     }
 
     @Override
     public void action() {
+        this.setSolution(null);
+        this.setConjugated(false);
+
         super.action();
 
         var clauseProteins = new HashMap<String, Protein>();
@@ -69,10 +66,15 @@ public class LogicBacterium extends BSimBacterium {
         
         this.setSolution(clauseProteins);
 
-        Protein nok = this.getF1().evaluateFunction(clauseProteins);
-        Protein ok = this.getF2().evaluateFunction(clauseProteins);
-
-        this.setStatus(nok, ok);
+        boolean satisfies = true;
+        for (Gene orClause : this.getFitness()) {
+            Protein output = orClause.evaluateFunction(this.getSolution());
+            if (output == null || !output.getName().equals("OK")) {
+                satisfies = false;
+                break;
+            }
+        }
+        this.setStatus(satisfies);
     }
 
     public void interaction(LogicBacterium bacterium) {
@@ -100,7 +102,7 @@ public class LogicBacterium extends BSimBacterium {
         LogicBacterium var1 = new LogicBacterium(
                 this.sim,
                 new Vector3d(this.position),
-                this.getF1(), this.getF2(), this.getF3(),
+                this.getFitness(),
                 this.mutateGenes(),
                 this.getCrossoverRate(), this.getMutationRate(),
                 this.getGenerationNum() + 1);
@@ -120,25 +122,19 @@ public class LogicBacterium extends BSimBacterium {
         return genes;
     }
 
-    private void setStatus(Protein nok, Protein ok) {
-        if (nok == null && ok == null) {
-            this.bacteriaStatus = Status.NOTHING_PRESENT;
-        } else if (nok != null && ok == null) {
-            this.bacteriaStatus = Status.NOK_PRESENT;
-        } else if (nok == null && ok != null) {
-            this.bacteriaStatus = Status.OK_PRESENT;
+    private void setStatus(boolean satisfies) {
+        if (satisfies) {
+            this.bacteriaStatus = Status.SATISFIES;
         } else {
-            this.bacteriaStatus = Status.BOTH_PRESENT;
+            this.bacteriaStatus = Status.NOT_SATISFIES;
         }
     }
 
     public Color getColor() {
         switch (this.bacteriaStatus) {
-            case NOTHING_PRESENT: return Color.GRAY;
-            case OK_PRESENT: return Color.GREEN;
-            case NOK_PRESENT: return Color.RED;
-            case BOTH_PRESENT: return Color.YELLOW;
-            default: return Color.WHITE;
+            case SATISFIES: return Color.GREEN;
+            case NOT_SATISFIES: return Color.RED;
+            default: return Color.GRAY;
         }
     }
 
@@ -165,30 +161,6 @@ public class LogicBacterium extends BSimBacterium {
     public void setMutationRate(double mutationRate) {
         this.mutationRate = mutationRate;
     }
-
-    public Gene getF1() {
-        return f1;
-    }
-
-    public void setF1(Gene f1) {
-        this.f1 = f1;
-    }
-
-    public Gene getF2() {
-        return f2;
-    }
-
-    public void setF2(Gene f2) {
-        this.f2 = f2;
-    }
-
-    public Gene getF3() {
-        return f3;
-    }
-
-    public void setF3(Gene f3) {
-        this.f3 = f3;
-    }
     
     public boolean getConjugated() {
         return conjugated;
@@ -212,5 +184,14 @@ public class LogicBacterium extends BSimBacterium {
 
     public void setGenerationNum(int generationNum) {
         this.generationNum = generationNum;
+    }
+
+
+    public List<Gene> getFitness() {
+        return fitness;
+    }
+
+    public void setFitness(List<Gene> fitness) {
+        this.fitness = fitness;
     }
 }

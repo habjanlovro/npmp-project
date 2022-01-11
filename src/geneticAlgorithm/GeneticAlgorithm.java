@@ -70,6 +70,9 @@ public class GeneticAlgorithm {
             var orClause = new ArrayList<Protein>();
             for (String literal : clause.split(" ")) {
                 int lit = Integer.parseInt(literal);
+                if (lit == 0) {
+                    continue;
+                }
                 if (lit < 0) {
                     orClause.add(new Protein(String.valueOf(lit * (-1)), false));
                 } else {
